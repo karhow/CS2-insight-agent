@@ -1,6 +1,13 @@
 #Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+try {
+  if ($env:ComSpec) { & $env:ComSpec /c "chcp 65001>nul" | Out-Null }
+} catch { }
+$cs2Utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $cs2Utf8
+[Console]::InputEncoding = $cs2Utf8
+$OutputEncoding = $cs2Utf8
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $staging = Join-Path $repoRoot "dist\staging"
 $metaPath = Join-Path $PSScriptRoot "python-runtime.json"
@@ -14,15 +21,15 @@ function Remove-TreeIfExists([string]$Path) {
 }
 
 try {
-  Write-Host "[CS2 Insight Agent] 正在下载 Python 运行库，请稍候..."
+  Write-Host "[CS2 Insight Agent] Downloading embedded Python (this may take a few minutes)..."
   $curl = Join-Path $env:SystemRoot "System32\curl.exe"
   if (Test-Path $curl) {
     & $curl -fsSL --connect-timeout 30 --max-time 0 --retry 2 --retry-delay 1 -o $tarball $meta.tarball_url
-    if ($LASTEXITCODE -ne 0) { throw "curl 下载失败，退出码: $LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "curl download failed, exit code: $LASTEXITCODE" }
   } else {
     Invoke-WebRequest -Uri $meta.tarball_url -OutFile $tarball -UseBasicParsing
   }
-  Write-Host "[CS2 Insight Agent] 正在校验 Python 包 SHA256..."
+  Write-Host "[CS2 Insight Agent] Verifying Python tarball SHA256..."
   $hash = (Get-FileHash -Path $tarball -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($hash -ne $meta.sha256.ToLowerInvariant()) {
     throw "Python tarball SHA256 mismatch: expected $($meta.sha256) got $hash"
@@ -42,7 +49,7 @@ try {
   & $py -m pip install --no-cache-dir --upgrade pip==25.0
   $req = Join-Path $repoRoot "backend\requirements.txt"
   & $py -m pip install --no-cache-dir -r $req
-  Write-Host "[CS2 Insight Agent] 正在剔除运行时不需要的文件以缩小安装包..."
+  Write-Host "[CS2 Insight Agent] Trimming Python runtime to reduce installer size..."
   foreach ($rel in @(
       "Lib\test",
       "Lib\idle_test",

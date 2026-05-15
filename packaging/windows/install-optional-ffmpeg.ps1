@@ -7,6 +7,13 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 $VerbosePreference = "SilentlyContinue"
 $InformationPreference = "SilentlyContinue"
+try {
+  if ($env:ComSpec) { & $env:ComSpec /c "chcp 65001>nul" | Out-Null }
+} catch { }
+$cs2Utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $cs2Utf8
+[Console]::InputEncoding = $cs2Utf8
+$OutputEncoding = $cs2Utf8
 $AppRoot = (Resolve-Path $AppRoot).Path
 $metaPath = Join-Path $PSScriptRoot "ffmpeg-redist.json"
 if (-not (Test-Path $metaPath)) {
@@ -22,7 +29,7 @@ function Download-FileQuiet([string]$Uri, [string]$DestPath) {
   if (Test-Path -LiteralPath $curl) {
     # -s: no progress meter (avoids extra console output during Inno [Run])
     & $curl -fsSL --connect-timeout 30 --max-time 0 --retry 2 --retry-delay 1 -o $DestPath $Uri
-    if ($LASTEXITCODE -ne 0) { throw "curl 下载失败，退出码: $LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "curl download failed, exit code: $LASTEXITCODE" }
     return
   }
   $wc = New-Object System.Net.WebClient
@@ -40,14 +47,14 @@ function Expand-ZipQuiet([string]$ZipPath, [string]$DestDir) {
 }
 
 try {
-  Write-Host "[CS2 Insight Agent] 正在下载 FFmpeg（可选组件），请稍候…"
+  Write-Host "[CS2 Insight Agent] Downloading FFmpeg (optional)..."
   Download-FileQuiet -Uri $meta.zip_url -DestPath $zipPath
-  Write-Host "[CS2 Insight Agent] 正在校验文件完整性…"
+  Write-Host "[CS2 Insight Agent] Verifying FFmpeg zip SHA256..."
   $hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($hash -ne $meta.sha256.ToLowerInvariant()) {
     throw "FFmpeg zip SHA256 mismatch: expected $($meta.sha256) got $hash"
   }
-  Write-Host "[CS2 Insight Agent] 正在解压并安装到程序目录…"
+  Write-Host "[CS2 Insight Agent] Extracting FFmpeg into app folder..."
   $extractRoot = Join-Path $tmp "extract"
   New-Item -ItemType Directory -Path $extractRoot -Force | Out-Null
   Expand-ZipQuiet -ZipPath $zipPath -DestDir $extractRoot
@@ -62,4 +69,4 @@ try {
 } finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }
-Write-Host "[CS2 Insight Agent] FFmpeg 已安装到: $outDir"
+Write-Host "[CS2 Insight Agent] FFmpeg installed to: $outDir"

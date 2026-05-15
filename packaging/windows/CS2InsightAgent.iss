@@ -37,8 +37,9 @@ Name: "{app}\data"; Flags: uninsneveruninstall
 Source: "*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Launch-CS2Insight.ps1"""; WorkingDir: "{app}\backend"; IconFilename: "{app}\app-icon.ico"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Launch-CS2Insight.ps1"""; WorkingDir: "{app}\backend"; IconFilename: "{app}\app-icon.ico"
+; WorkingDir must be install root: some shells resolve -File relative to Start-in; script lives in {app}, not {app}\backend.
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -WindowStyle Normal -ExecutionPolicy Bypass -File ""{app}\Launch-CS2Insight.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\app-icon.ico"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -WindowStyle Normal -ExecutionPolicy Bypass -File ""{app}\Launch-CS2Insight.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\app-icon.ico"
 
 [Run]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\install-optional-ffmpeg.ps1"" -AppRoot ""{app}"""; StatusMsg: "Installing FFmpeg..."; Tasks: downloadffmpeg; Flags: runasoriginaluser waituntilterminated

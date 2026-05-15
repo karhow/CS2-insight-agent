@@ -2,9 +2,27 @@
 # Launches the bundled backend; opens default browser once the web UI responds.
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+try {
+  if ($env:ComSpec) { & $env:ComSpec /c "chcp 65001>nul" | Out-Null }
+} catch { }
+$cs2Utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $cs2Utf8
+[Console]::InputEncoding = $cs2Utf8
+$OutputEncoding = $cs2Utf8
 
-$appRoot = $PSScriptRoot
-$Host.UI.RawUI.WindowTitle = "CS2 Insight Agent"
+$appRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $appRoot) {
+  Write-Host "[CS2 Insight Agent] Cannot resolve install directory." -ForegroundColor Red
+  Read-Host "Press Enter to exit"
+  exit 1
+}
+Set-Location -LiteralPath $appRoot
+try {
+  if ($Host.UI -and $Host.UI.RawUI) {
+    $Host.UI.RawUI.WindowTitle = "CS2 Insight Agent"
+  }
+} catch {
+}
 $py = Join-Path $appRoot "python\python.exe"
 $wd = Join-Path $appRoot "backend"
 
@@ -23,32 +41,52 @@ if ($env:CS2_INSIGHT_PORT) {
 
 $openUrl = "http://$($hostOnly):$port/"
 
-if (-not (Test-Path $py)) {
-  Write-Host "[CS2 Insight Agent] 未找到 python.exe: $py" -ForegroundColor Red
-  Read-Host "按 Enter 退出"
+if (-not (Test-Path -LiteralPath $py)) {
+  Write-Host "[CS2 Insight Agent] python.exe not found: $py" -ForegroundColor Red
+  Read-Host "Press Enter to exit"
   exit 1
 }
 
-$browserJob = Start-Job -ScriptBlock {
-  param($Url)
-  $ProgressPreference = "SilentlyContinue"
-  $deadline = (Get-Date).AddSeconds(90)
-  while ((Get-Date) -lt $deadline) {
-    Start-Sleep -Milliseconds 400
-    try {
-      Invoke-WebRequest -Uri $Url -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop | Out-Null
-      Start-Process $Url
-      break
-    } catch {
-    }
-  }
-} -ArgumentList $openUrl
-
+$browserJob = $null
 try {
+  $browserJob = Start-Job -ScriptBlock {
+    param($Url)
+    $ProgressPreference = "SilentlyContinue"
+    $deadline = (Get-Date).AddSeconds(90)
+    while ((Get-Date) -lt $deadline) {
+      Start-Sleep -Milliseconds 400
+      try {
+        Invoke-WebRequest -Uri $Url -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop | Out-Null
+        Start-Process $Url
+        break
+      } catch {
+      }
+    }
+  } -ArgumentList $openUrl
+} catch {
+  Write-Warning "[CS2 Insight Agent] Could not start browser waiter job: $($_.Exception.Message). Open $openUrl manually when the server is ready."
+}
+
+$pushed = $false
+try {
+  if (-not (Test-Path -LiteralPath $wd)) {
+    throw "Backend folder not found: $wd"
+  }
   Push-Location $wd
+  $pushed = $true
   & $py -m app.run_server
+  if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
+    throw "python exited with code $LASTEXITCODE"
+  }
+} catch {
+  Write-Host "[CS2 Insight Agent] $($_.Exception.Message)" -ForegroundColor Red
+  if ($_.ScriptStackTrace) { Write-Host $_.ScriptStackTrace -ForegroundColor DarkRed }
+  Read-Host "Press Enter to exit"
+  exit 1
 } finally {
-  Pop-Location
+  if ($pushed) {
+    Pop-Location
+  }
   Get-Job -ErrorAction SilentlyContinue | Stop-Job -ErrorAction SilentlyContinue
   Get-Job -ErrorAction SilentlyContinue | Remove-Job -Force -ErrorAction SilentlyContinue
 }
