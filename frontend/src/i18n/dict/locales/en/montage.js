@@ -244,6 +244,7 @@ export default {
   "montage.themeCustomName": "Custom Montage",
   "montage.themeCustomDesc": "Pick clips and order manually",
   "montage.clipTypeHighlight": "Highlight",
+  "montage.clipTypeFullDemo": "Full demo",
   "montage.clipTypeFail": "Fail",
   "montage.clipTypeMemeDeath": "Meme Death",
   "montage.clipTypeKill": "Kill",

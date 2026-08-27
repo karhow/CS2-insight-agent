@@ -13,12 +13,14 @@ class RequestType(str, Enum):
     death_compilation = "death_compilation"
     round_compilation = "round_compilation"
     timeline_round = "timeline_round"
+    full_demo = "full_demo"
 
 
 class SourceType(str, Enum):
     kill = "kill"
     death = "death"
     round = "round"
+    demo = "demo"
 
 
 class Perspective(str, Enum):
@@ -45,6 +47,7 @@ class DemoContext(BaseModel):
     final_round_end_tick: int
     server_name: str = ""
     all_players: list = []
+    win_panel_match_tick: int = 0
 
 
 class TargetPlayer(BaseModel):
@@ -122,6 +125,16 @@ class RecordingOptions(BaseModel):
     kill_fx_tick_offset: Optional[int] = None
     # LLM 导播大纲：合并击杀簇 + 精选受害者 POV（替代纯规则/全量 K→V）
     use_ai_director: bool = False
+    # 整局 demo 录制：观战 HUD 显示文字聊天（tv_nochat 0）
+    show_ingame_chat: bool = False
+    # 整局 demo：语音音量倍率（1.0=默认，最大 2.0 注入 snd_voipvolume）
+    voice_comm_boost: float = 1.0
+    # 整局 demo：收听全员语音（tv_listen_voice_indices 全员掩码）
+    listen_all_voice: bool = True
+    # 整局 demo：目标玩家死亡后自动切视角 — off | killer | teammate
+    death_follow_mode: str = "off"
+    # 死亡后延迟多少秒再切换（留一点死亡动画）
+    death_follow_post_sec: float = 1.0
 
 
 class SourceRef(BaseModel):

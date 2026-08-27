@@ -1,4 +1,4 @@
-import { CheckSquare, XSquare, Loader2, ListPlus, Sparkles, Skull } from "lucide-react";
+import { CheckSquare, XSquare, Loader2, ListPlus, Sparkles, Skull, Video } from "lucide-react";
 import { useT } from "../i18n/useT.js";
 
 export default function ActionBar({
@@ -10,6 +10,8 @@ export default function ActionBar({
   onAddSelectedToQueue,
   onAddCurrentPlayerHighlights,
   onAddCurrentPlayerFails,
+  onRecordFullDemo,
+  canRecordFullDemo = false,
   currentPlayer,
   queueLength,
   batchRecording,
@@ -81,6 +83,17 @@ export default function ActionBar({
             >
               <Skull className="h-3.5 w-3.5" />
               {t("actionbar.addCurrentPlayerFails", { player: currentPlayer })}
+            </button>
+          )}
+          {!compact && canRecordFullDemo && onRecordFullDemo && (
+            <button
+              type="button"
+              disabled={batchRecording}
+              onClick={onRecordFullDemo}
+              className="flex items-center gap-2 rounded-lg border border-cs2-border bg-cs2-bg-input px-4 py-2.5 text-xs font-bold text-cs2-text-primary transition-colors hover:border-cs2-accent/40 hover:text-cs2-accent disabled:opacity-30"
+            >
+              <Video className="h-3.5 w-3.5" />
+              {t("fullDemo.enqueueButton")}
             </button>
           )}
           <button

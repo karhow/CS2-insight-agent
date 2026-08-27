@@ -1,7 +1,7 @@
 // frontend/src/recording/types.js
 
 /**
- * @typedef {"highlight"|"fail"|"timeline_kill"|"timeline_death"|"kill_compilation"|"death_compilation"|"round_compilation"|"timeline_round"} RequestType
+ * @typedef {"highlight"|"fail"|"timeline_kill"|"timeline_death"|"kill_compilation"|"death_compilation"|"round_compilation"|"timeline_round"|"full_demo"} RequestType
  */
 
 /**

@@ -4,6 +4,7 @@ import { BarChart3, Library, Play, RefreshCw, Users } from "lucide-react";
 import ActionBar from "../../components/ActionBar";
 import ClipList from "../../components/ClipList";
 import DemoUpload from "../../components/DemoUpload";
+import FullDemoEnqueueModal from "../../components/FullDemoEnqueueModal.jsx";
 import RoundTimelineView from "./workspaces/timeline/RoundTimelineView";
 import WeaponKillsView from "./workspaces/WeaponKillsView";
 import Demo2DReplayPreview from "./replay/Demo2DReplayPreview";
@@ -54,6 +55,7 @@ export default function DemoAnalysisPage() {
   const selectedTag = storedSelectedTag === "全部" ? ALL_TAG : storedSelectedTag;
   const [selectedRound, setSelectedRound] = useSessionState(`${sessionPrefix}:round`, null);
   const [replayRound, setReplayRound] = useSessionState(`${sessionPrefix}:replay-round`, null);
+  const [fullDemoOpen, setFullDemoOpen] = useState(false);
   const uploadedDemoCount = s.uploadedDemos?.length || 0;
   const parsedDemoCount = matches.filter((match) => match?.parsed).length;
   const allDemosParsed = uploadedDemoCount > 0
@@ -345,6 +347,8 @@ export default function DemoAnalysisPage() {
                   onAddSelectedToQueue={s.handleAddSelectedToQueue}
                   onAddCurrentPlayerHighlights={s.handleAddCurrentPlayerHighlights}
                   onAddCurrentPlayerFails={s.handleAddCurrentPlayerFails}
+                  onRecordFullDemo={() => setFullDemoOpen(true)}
+                  canRecordFullDemo={Boolean(s.currentParsed && activePlayer && selectedPlayer)}
                   currentPlayer={activePlayerLabel}
                   queueLength={s.queue.length}
                   batchRecording={s.batchRecording}
@@ -357,6 +361,21 @@ export default function DemoAnalysisPage() {
         </div>
       </main>
       <DemoPlaybackUi />
+      <FullDemoEnqueueModal
+        open={fullDemoOpen}
+        onClose={() => setFullDemoOpen(false)}
+        demoId={currentUpload?.id ?? null}
+        playerName={activePlayerLabel}
+        matchMeta={activePlayerResult?.match_meta || meta}
+        demoPath={currentUpload?.path || s.currentParsed?.demo_path || ""}
+        demoFilename={s.currentFilename || ""}
+        targetSteamId={
+          activePlayerResult?.match_meta?.target_steam_id != null
+            ? String(activePlayerResult.match_meta.target_steam_id)
+            : steamIdForPlayer(selectedPlayer)
+        }
+        onConfirm={s.handleFullDemoConfirm}
+      />
     </div>
   );
 }

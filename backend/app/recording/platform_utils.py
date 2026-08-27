@@ -77,6 +77,24 @@ def compute_voice_listen_mask(
     return _compute_team_mask(all_players, target_team, slot_offset)
 
 
+def compute_voice_listen_all_mask(
+    all_players: list[dict],
+    slot_offset: int,
+) -> Optional[int]:
+    """位掩码：收听 demo 中所有有效 spec_slot 的玩家语音。"""
+    if not all_players:
+        return None
+    mask = 0
+    for p in all_players:
+        slot = p.get("spec_slot")
+        if slot is None:
+            continue
+        actual = int(slot) + slot_offset
+        if 1 <= actual <= 64:
+            mask |= 1 << (actual - 1)
+    return mask if mask != 0 else None
+
+
 def compute_voice_listen_mask_enemy(
     all_players: list[dict],
     target_steamid64: str,

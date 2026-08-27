@@ -185,6 +185,7 @@ function buildShell(overrides = {}) {
     handleAddSelectedToQueue: vi.fn(),
     handleAddCurrentPlayerHighlights: vi.fn(),
     handleAddCurrentPlayerFails: vi.fn(),
+    handleFullDemoConfirm: vi.fn(),
     canAddCurrentPlayerHighlights: false,
     canAddCurrentPlayerFails: false,
     queue: [],

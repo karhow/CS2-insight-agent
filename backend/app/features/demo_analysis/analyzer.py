@@ -126,6 +126,7 @@ class SharedDemoFacts:
     match_summary: tuple[int, int, str, int, str, str]
     demo_max_tick: int
     demo_end_tick: int
+    win_panel_match_tick: int
     name_to_uid: dict[str, int]
     observed_user_ids: tuple[int, ...]
     spec_slots: dict[str, int]
@@ -776,6 +777,14 @@ class DemoAnalyzer:
             require_player_color=True,
         )
         server_name = str(header.get("server_name") or "").strip()
+        win_panel_df = _safe_parse_event(self.parser, "cs_win_panel_match")
+        win_panel_match_tick = 0
+        if not win_panel_df.empty and "tick" in win_panel_df.columns:
+            wp_ticks = pd.to_numeric(win_panel_df["tick"], errors="coerce").fillna(0).astype(int)
+            if match_start_tick > 0:
+                wp_ticks = wp_ticks.loc[wp_ticks >= match_start_tick]
+            if not wp_ticks.empty:
+                win_panel_match_tick = int(wp_ticks.max())
         round_scores_by_round = build_round_scores(
             self.parser,
             match_start_tick,
@@ -879,6 +888,7 @@ class DemoAnalyzer:
             match_summary=match_summary,
             demo_max_tick=demo_max_tick,
             demo_end_tick=demo_end_tick,
+            win_panel_match_tick=win_panel_match_tick,
             name_to_uid=name_to_uid,
             observed_user_ids=observed_user_ids,
             spec_slots=spec_slots,
@@ -2111,6 +2121,9 @@ class DemoAnalyzer:
                 meme_series_badges=meme_series_badges_for_kd(target_total_kills, target_total_deaths),
                 server_name=_server_name, all_players=all_players_roster,
                 demo_end_tick=shared_facts.demo_end_tick,
+                win_panel_match_tick=shared_facts.win_panel_match_tick,
+                match_start_tick=match_start_tick,
+                demo_max_tick=_demo_max_tick,
             ),
             clips=clips, timeline=timeline, round_timeline=round_timeline,
         )

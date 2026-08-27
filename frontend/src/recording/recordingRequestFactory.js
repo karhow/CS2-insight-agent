@@ -17,6 +17,11 @@ export const DEFAULT_RECORDING_OPTIONS = {
   enable_victim_pov: false,
   interleave_pov_pairs: false,
   use_ai_director: false,
+  show_ingame_chat: false,
+  voice_comm_boost: 1.0,
+  listen_all_voice: true,
+  death_follow_mode: "off",
+  death_follow_post_sec: 1.0,
   // victim_pov_pre_sec: null means "use highlight_pre_sec" on the backend
   victim_pov_pre_sec: null,
   victim_pov_post_sec: 1.5,
@@ -77,13 +82,14 @@ function buildDemoContext(clipData, queueItem, matchMeta) {
     demo_filename: queueItem.demoFilename || "",
     map_name: clipData.map_name || matchMeta?.map_name || "unknown",
     tick_rate: Number(clipData.tick_rate) || 64,
-    first_tick: 0,
+    first_tick: Number(matchMeta?.match_start_tick) || Number(clipData.start_tick) || 0,
     demo_end_tick: demoEndTick,
     final_round: finalRound,
     final_round_start_tick: 0,
     final_round_end_tick: finalRoundEndTick,
     server_name: matchMeta?.server_name || "",
     all_players: matchMeta?.all_players || [],
+    win_panel_match_tick: Number(matchMeta?.win_panel_match_tick) || 0,
   };
 }
 
@@ -455,6 +461,33 @@ export function buildTimelineRoundRecordingRequest(clipData, queueItem, matchMet
         target_death_tick: clipData.death_tick ?? null,
       },
     ],
+    options: mergedOptions,
+    source_ref: buildSourceRef(clipData, queueItem),
+  };
+}
+
+export function buildFullDemoRecordingRequest(clipData, queueItem, matchMeta, options = {}) {
+  const mergedOptions = { ...DEFAULT_RECORDING_OPTIONS, ...options };
+  const demo = buildDemoContext(clipData, queueItem, matchMeta);
+  const roster = lookupRosterPlayer(
+    queueItem.targetPlayer,
+    queueItem.targetSteamId,
+    matchMeta?.all_players
+  );
+  const targetSpecSlot = clipData.target_spec_slot ?? roster?.spec_slot ?? null;
+  const targetPlayer = buildTargetPlayer(
+    queueItem.targetPlayer,
+    queueItem.targetSteamId || roster?.steamid64,
+    targetSpecSlot
+  );
+  return {
+    request_id: newRequestId(),
+    request_type: "full_demo",
+    source_type: "demo",
+    demo,
+    target_player: targetPlayer,
+    events: [],
+    rounds: [],
     options: mergedOptions,
     source_ref: buildSourceRef(clipData, queueItem),
   };

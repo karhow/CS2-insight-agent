@@ -195,6 +195,18 @@ def normalize(dto: RecordingRequestDTO) -> NormalizedRequest:
     if dto.options.victim_pov_pre_sec is not None and dto.options.victim_pov_pre_sec < 0:
         raise NormalizationError("options.victim_pov_pre_sec must be >= 0 if set")
 
+    if dto.request_type == RequestType.full_demo:
+        boost = float(dto.options.voice_comm_boost)
+        if boost < 1.0 or boost > 2.0:
+            raise NormalizationError("options.voice_comm_boost must be between 1.0 and 2.0")
+        df_mode = (dto.options.death_follow_mode or "off").strip().lower()
+        if df_mode not in ("off", "killer", "teammate"):
+            raise NormalizationError(
+                "options.death_follow_mode must be off, killer, or teammate"
+            )
+        if float(dto.options.death_follow_post_sec) < 0:
+            raise NormalizationError("options.death_follow_post_sec must be >= 0")
+
     if (
         dto.options.enable_victim_pov
         and dto.request_type not in {

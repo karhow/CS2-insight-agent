@@ -244,6 +244,7 @@ export default {
   "montage.themeCustomName": "自定义合集",
   "montage.themeCustomDesc": "手动选择片段和顺序",
   "montage.clipTypeHighlight": "高光",
+  "montage.clipTypeFullDemo": "整局",
   "montage.clipTypeFail": "下饭",
   "montage.clipTypeMemeDeath": "梗死亡",
   "montage.clipTypeKill": "击杀",

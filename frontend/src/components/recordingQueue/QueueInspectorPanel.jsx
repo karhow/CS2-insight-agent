@@ -17,6 +17,7 @@ import {
   isRoundTimelineRoundClip,
   isTimelineSourceClip,
 } from "../../utils/montageUtils";
+import DemoChatLogPanel from "./DemoChatLogPanel.jsx";
 import {
   freezeToDeathQueueRoundBadgeText,
   isFreezeToDeathCompilation,
@@ -72,6 +73,7 @@ export default function QueueInspectorPanel({ selectedId: _selectedId, selectedI
   }
 
   const cd = selectedItem.clipData || {};
+  const isFullDemo = String(cd.category || "").trim() === "full_demo";
   const hideQueueAi = isTimelineSourceClip(cd) || cd.category === "compilation";
   const killBadge = t(blockShortLabelI18nKey(getMontageBlockShortLabel(cd)));
   const playerName = String(selectedItem.targetPlayer || cd.player_name || "—").trim() || "—";
@@ -178,7 +180,9 @@ export default function QueueInspectorPanel({ selectedId: _selectedId, selectedI
             <p className="rounded-lg border border-amber-500/20 bg-cs2-amber-surface px-2 py-1.5 text-[11px] text-cs2-amber-on-surface">
               {isRoundTimelineRoundClip(cd)
                 ? t("queue.pacingLockedTimeline")
-                : t("queue.pacingLockedCompilation")}
+                : isFullDemo
+                  ? t("fullDemo.pacingLocked")
+                  : t("queue.pacingLockedCompilation")}
             </p>
           ) : (
             <PacingMicroPanel
@@ -190,9 +194,29 @@ export default function QueueInspectorPanel({ selectedId: _selectedId, selectedI
         </FieldGroup>
 
         {/* POV panel */}
-        <FieldGroup icon={Eye} title={t("queue.fieldPov")}>
-          <PovSection item={selectedItem} updateItemPacing={updateItemPacing} />
-        </FieldGroup>
+        {!isFullDemo ? (
+          <FieldGroup icon={Eye} title={t("queue.fieldPov")}>
+            <PovSection item={selectedItem} updateItemPacing={updateItemPacing} />
+          </FieldGroup>
+        ) : null}
+
+        {isFullDemo ? (
+          <>
+            {selectedItem.pacing_override?.death_follow_mode &&
+            selectedItem.pacing_override.death_follow_mode !== "off" ? (
+              <FieldGroup icon={Eye} title={t("fullDemo.deathFollowActive")}>
+                <p className="text-[11px] text-cs2-text-secondary">
+                  {selectedItem.pacing_override.death_follow_mode === "killer"
+                    ? t("fullDemo.deathFollowKiller")
+                    : t("fullDemo.deathFollowTeammate")}
+                </p>
+              </FieldGroup>
+            ) : null}
+            <FieldGroup icon={Monitor} title={t("fullDemo.chatLogTitle")}>
+              <DemoChatLogPanel messages={selectedItem.demoChatLog || []} />
+            </FieldGroup>
+          </>
+        ) : null}
       </div>
     </div>
   );

@@ -61,6 +61,7 @@ _REQUEST_TYPE_TO_CATEGORY: dict[str, str] = {
     "death_compilation": "compilation",
     "round_compilation": "compilation",
     "timeline_round": "timeline_round",
+    "full_demo": "full_demo",
 }
 
 _REQUEST_TYPE_TO_TIMELINE_RECORD_KIND: dict[str, str] = {

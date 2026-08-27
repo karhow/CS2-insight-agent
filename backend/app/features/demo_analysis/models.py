@@ -53,6 +53,12 @@ class MatchMeta:
     all_players: list = field(default_factory=list)
     # PBDEMS2 最后外层帧 tick；录制只用它在真实 EOF 前停止，避免返回主菜单。
     demo_end_tick: int = 0
+    # 比赛结算界面（cs_win_panel_match）出现的 tick；0 = demo 无该事件。供整局录制封顶。
+    win_panel_match_tick: int = 0
+    # 正式比赛开始 tick（round_announce_match_start）；整局录制起点
+    match_start_tick: int = 0
+    # demo 内观测到的最大 tick（round_end / player_death）；整局录制终点参考
+    demo_max_tick: int = 0
 
 
 @dataclass

@@ -35,6 +35,36 @@ async def _inject_voice_listen_mask(mask: int) -> None:
         raise VoiceIsolationError("voice mask injection returned false")
 
 
+def _full_demo_console_lines(segment: RecordingSegment) -> list[str]:
+    """Per-segment cvar overrides for whole-demo recording (chat HUD + voice boost)."""
+    meta = segment.metadata or {}
+    if not meta.get("full_demo"):
+        return []
+    lines: list[str] = []
+    if meta.get("show_ingame_chat"):
+        lines.append("tv_nochat 0")
+    boost = float(meta.get("voice_comm_boost") or 1.0)
+    if boost > 1.0:
+        vol = min(max(boost, 1.0), 2.0)
+        lines.append(f"snd_voipvolume {vol:g}")
+    elif meta.get("listen_all_voice"):
+        lines.append("snd_voipvolume 1")
+    return lines
+
+
+async def _inject_full_demo_console_lines(segment: RecordingSegment) -> None:
+    lines = _full_demo_console_lines(segment)
+    if not lines:
+        return
+    try:
+        ok = await asyncio.to_thread(inject_console_sequence, lines)
+    except Exception as exc:
+        logger.warning("[RecordingV3] full_demo console inject failed: %s", exc)
+        return
+    if ok is not True:
+        logger.warning("[RecordingV3] full_demo console inject returned false")
+
+
 def _kb_bus(segment=None):
     """Return (bus, keyboard_tick_offset, kill_fx_tick_offset).
 
@@ -184,6 +214,89 @@ def _get_gsi_round_phase() -> Optional[str]:
         return str(phase).lower() if phase is not None else None
     except Exception:
         return None
+
+
+async def _apply_death_follow_switch(switch: dict) -> None:
+    """Inject spec_player during full-demo recording (no GSI verify — keep latency low)."""
+    slot = switch.get("spec_slot")
+    name = (switch.get("player_name") or "").strip()
+    action = switch.get("action", "")
+    if slot is not None:
+        try:
+            await spec_by_slot(int(slot))
+        except Exception as e:
+            logger.warning("[RecordingV3][DeathFollow] spec slot %s failed: %s", slot, e)
+    elif name:
+        await spec_player(name)
+    else:
+        logger.warning(
+            "[RecordingV3][DeathFollow] switch %s has no slot or name (tick=%s)",
+            action,
+            switch.get("tick"),
+        )
+
+
+async def _record_until_tick_full_demo(
+    segment: RecordingSegment,
+    tick_rate: float,
+    abort_event: Optional[asyncio.Event],
+    *,
+    overhead_sec: float = 0.0,
+    warnings: Optional[list[str]] = None,
+) -> str:
+    """Full-demo tick watcher with mid-recording death-follow spec switches."""
+    meta = segment.metadata or {}
+    schedule: list[dict] = list(meta.get("death_follow_schedule") or [])
+    start_tick = segment.start_tick
+    end_tick = segment.end_tick
+    seg_idx = segment.segment_index
+
+    base_duration = max(0.1, (end_tick - start_tick) / tick_rate)
+    duration_sec = max(0.1, base_duration - overhead_sec)
+    hard_deadline = time.monotonic() + duration_sec + 15.0
+    t0 = time.monotonic()
+    next_switch_idx = 0
+    poll_count = 0
+
+    logger.info(
+        "[RecordingV3][DeathFollow] segment=%d switches=%d duration≈%.1fs",
+        seg_idx,
+        len(schedule),
+        duration_sec,
+    )
+
+    while True:
+        if abort_event and abort_event.is_set():
+            return "aborted"
+
+        await asyncio.sleep(_TICK_WATCHER_POLL_SEC)
+        poll_count += 1
+        now = time.monotonic()
+        elapsed = now - t0
+        estimated_tick = start_tick + int(elapsed * tick_rate)
+
+        while next_switch_idx < len(schedule):
+            sw = schedule[next_switch_idx]
+            if estimated_tick < sw.get("tick", 0):
+                break
+            try:
+                await _apply_death_follow_switch(sw)
+            except Exception as e:
+                msg = f"death_follow switch failed at tick {sw.get('tick')}: {e}"
+                logger.warning("[RecordingV3][DeathFollow] %s", msg)
+                if warnings is not None:
+                    warnings.append(msg)
+            next_switch_idx += 1
+
+        if estimated_tick >= end_tick or elapsed >= duration_sec:
+            return "done"
+        if now >= hard_deadline:
+            logger.warning(
+                "[RecordingV3][DeathFollow] segment=%d hard deadline reached at tick≈%d",
+                seg_idx,
+                estimated_tick,
+            )
+            return "done"
 
 
 async def _record_until_tick(
@@ -770,6 +883,7 @@ class RecordingExecutor:
 
                 if segment.voice_listen_mask is not None:
                     await _inject_voice_listen_mask(segment.voice_listen_mask)
+                await _inject_full_demo_console_lines(segment)
 
                 # ── 3. Sync to start_tick, then pause ───────────────────────
                 # spec_player / GSI-verify run while the demo plays in the prepare window.
@@ -842,6 +956,7 @@ class RecordingExecutor:
                             return result
                     if segment.voice_listen_mask is not None:
                         await _inject_voice_listen_mask(segment.voice_listen_mask)
+                    await _inject_full_demo_console_lines(segment)
 
                 logger.info(
                     "[RecordingV3] spec_elapsed=%.2fs prepare_elapsed=%.2fs "
@@ -1022,6 +1137,16 @@ class RecordingExecutor:
                 if segment.source_type == SourceType.round:
                     tick_result = await _record_until_tick_round_segment(
                         segment, plan.tick_rate, self._abort_event, result.warnings,
+                    )
+                elif (segment.metadata or {}).get("full_demo") and (
+                    segment.metadata or {}
+                ).get("death_follow_schedule"):
+                    tick_result = await _record_until_tick_full_demo(
+                        segment,
+                        plan.tick_rate,
+                        self._abort_event,
+                        overhead_sec=record_overhead_sec,
+                        warnings=result.warnings,
                     )
                 else:
                     tick_result = await _record_until_tick(

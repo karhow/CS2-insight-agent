@@ -10,6 +10,7 @@ from .normalizer import normalize, NormalizationError
 from .planners.event_clip_planner import plan_event_clip
 from .planners.event_compilation_planner import plan_event_compilation
 from .planners.round_pov_planner import plan_round_pov
+from .planners.full_demo_planner import plan_full_demo
 from .postprocess.segment_postprocessor import postprocess_segments
 
 _AI_DIRECTOR_TYPES = {
@@ -69,6 +70,7 @@ def build_plan(dto: RecordingRequestDTO) -> RecordingPlan:
         RequestType.round_compilation,
         RequestType.timeline_round,
     }
+    FULL_DEMO_TYPES = {RequestType.full_demo}
 
     if dto.request_type in EVENT_CLIP_TYPES:
         if req.options.use_ai_director and dto.request_type in _AI_DIRECTOR_TYPES:
@@ -83,6 +85,9 @@ def build_plan(dto: RecordingRequestDTO) -> RecordingPlan:
     elif dto.request_type in ROUND_POV_TYPES:
         raw_segments, round_warnings = plan_round_pov(req)
         extra_warnings.extend(round_warnings)
+    elif dto.request_type in FULL_DEMO_TYPES:
+        raw_segments, fd_warnings = plan_full_demo(req)
+        extra_warnings.extend(fd_warnings)
     else:
         raise ValueError(f"Unknown request_type: {dto.request_type}")
 

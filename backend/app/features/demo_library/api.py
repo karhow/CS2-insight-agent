@@ -316,6 +316,25 @@ async def get_demo_library_item(demo_id: int):
     return item
 
 
+@router.get("/api/demos/{demo_id}/chat-log")
+async def get_demo_chat_log(demo_id: int):
+    """解析 demo 内全部文字聊天（player_say 等事件）。"""
+    row = await demo_db.get_demo_by_id(demo_id)
+    if not row:
+        raise HTTPException(404, f"Demo not found: {demo_id}")
+    dem_path = str(row["path"])
+    if not Path(dem_path).is_file():
+        raise HTTPException(404, "Demo file not found on disk")
+    from ..demo_analysis.demo_chat import parse_demo_chat_messages
+
+    try:
+        messages, diagnostics = await asyncio.to_thread(parse_demo_chat_messages, dem_path)
+    except Exception as e:
+        logger.exception("Chat log parse failed demo_id=%s: %s", demo_id, e)
+        raise HTTPException(500, f"Chat parse failed: {e}") from e
+    return {"demo_id": demo_id, "messages": messages, "count": len(messages), "diagnostics": diagnostics}
+
+
 @router.get("/api/demos/{demo_id}/player-stats")
 async def get_demo_player_stats_library(demo_id: int):
     row = await demo_db.get_demo_by_id(demo_id)

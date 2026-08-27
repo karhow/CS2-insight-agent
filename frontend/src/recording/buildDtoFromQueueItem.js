@@ -8,6 +8,7 @@ import {
   buildDeathCompilationRecordingRequest,
   buildRoundCompilationRecordingRequest,
   buildTimelineRoundRecordingRequest,
+  buildFullDemoRecordingRequest,
 } from "./recordingRequestFactory";
 import { stripGlobalPacingMetaKeys } from "../stores/recordingQueueStore";
 
@@ -39,6 +40,10 @@ function pacingOverrideToOptions(pacing) {
   if (pacing.victim_pov === true) opts.enable_victim_pov = true;
   if (pacing.pov_interleaved === true) opts.interleave_pov_pairs = true;
   if (pacing.ai_director === true) opts.use_ai_director = true;
+  if (pacing.show_ingame_chat === true) opts.show_ingame_chat = true;
+  if (pacing.voice_comm_boost != null) opts.voice_comm_boost = pacing.voice_comm_boost;
+  if (pacing.listen_all_voice === false) opts.listen_all_voice = false;
+  if (pacing.death_follow_mode != null) opts.death_follow_mode = pacing.death_follow_mode;
 
   // Victim POV independent timing — maps to dedicated backend fields.
   if (pacing.victim_pov_pre_sec != null) opts.victim_pov_pre_sec = pacing.victim_pov_pre_sec;
@@ -109,6 +114,7 @@ export function buildDtoFromQueueItem(item, matchMeta, globalPacing = {}) {
 
   if (cat === "highlight") return buildHighlightRecordingRequest(...args);
   if (cat === "fail") return buildFailRecordingRequest(...args);
+  if (cat === "full_demo") return buildFullDemoRecordingRequest(...args);
   if (cat === "compilation") {
     if (kind === "freeze_to_death") return buildRoundCompilationRecordingRequest(...args);
     if (["rival_kills", "all_kills", "weapon_kills"].includes(kind))

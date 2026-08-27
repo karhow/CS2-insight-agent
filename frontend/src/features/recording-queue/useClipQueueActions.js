@@ -289,6 +289,15 @@ export function useClipQueueActions({
     });
   }, [addToQueue]);
 
+  const handleFullDemoConfirm = useCallback((payload) => {
+    addToQueue({
+      ...payload,
+      clientClipUid: payload.clipData?.client_clip_uid,
+      clipId: payload.clipData?.clip_id,
+    });
+    setProgressText(t("fullDemo.enqueued"), { autoDismissMs: 2500, queueLink: true });
+  }, [addToQueue, setProgressText, t]);
+
   const isAlreadyQueued = useCallback((clipData, meta) => queuedClientClipUidsGlobal.has(
     queueItemClientUid({
       clientClipUid: clipData.client_clip_uid,
@@ -469,6 +478,7 @@ export function useClipQueueActions({
     handleAddSelectedToQueue,
     handleAddCurrentPlayerHighlights,
     handleAddCurrentPlayerFails,
+    handleFullDemoConfirm,
     handleAddTimelineEventToQueue,
     handleAddTimelineRoundToQueue,
     handleAddTimelineEventsBatchToQueue,

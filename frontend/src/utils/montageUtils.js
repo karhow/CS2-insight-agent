@@ -75,6 +75,7 @@ export function isRoundTimelineRoundClip(clip) {
 /** 仅「整回合时间线」与「回合死亡合集」锁定单条剪辑节奏与回看；时间线单事件可改节奏 */
 export function isClipPacingAndPovLocked(clip) {
   if (!clip || typeof clip !== "object") return false;
+  if (String(clip.category || "").trim() === "full_demo") return true;
   return isRoundTimelineRoundClip(clip) || isFreezeToDeathCompilation(clip);
 }
 
@@ -143,6 +144,7 @@ export function clipTypeI18nKey(tag) {
     "时间线击杀": "montage.clipTypeTimelineKill",
     "时间线死亡": "montage.clipTypeTimelineDeath",
     "时间线整回合": "montage.clipTypeTimelineRound",
+    "整局": "montage.clipTypeFullDemo",
     "普通片段": "montage.clipTypeNormal",
   };
   return MAP[tag] || "montage.clipTypeNormal";
@@ -160,6 +162,7 @@ export function normalizeClipType(clip) {
   if (wck === "kill_compilation") return "击杀合集";
   if (wck === "death_compilation") return "死亡合集";
   if (wck === "round_compilation") return "回合合集";
+  if (wck === "full_demo") return "整局录制";
   if (wck === "highlight") return "高光";
   if (wck === "fail") return "下饭";
 
@@ -726,6 +729,7 @@ export function getMontageBlockShortLabel(clip) {
     return normalizeClipType(clip);
   }
   const cat = String(clip.category || "").toLowerCase();
+  if (cat === "full_demo") return "整局";
   if (cat === "compilation") return "合集";
   if (cat === "fail" || cat === "meme_death") return "下饭";
   return "高光";
